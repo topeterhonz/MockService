@@ -2,13 +2,26 @@ package com.hawa.mockservice;
 
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.view.Display;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListPopupWindow;
+import android.widget.PopupWindow;
+import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
 import com.squareup.okhttp.MediaType;
@@ -55,6 +68,7 @@ public class MockService extends Service {
     private String mHost = "http://api.tumblr.com";
 
     private ImageView mChatHead;
+    private WindowManager mWindowManager;
 
 
     // Handler that receives messages from the thread
@@ -85,6 +99,84 @@ public class MockService extends Service {
             // the service in the middle of handling another job
 
         }
+    }
+
+    private void showChatHead() {
+        mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+
+        mChatHead = new ImageView(this);
+        mChatHead.setImageResource(R.drawable.chat_head);
+
+        final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+
+        params.gravity = Gravity.TOP | Gravity.LEFT;
+        params.x = 0;
+        params.y = 100;
+
+        mWindowManager.addView(mChatHead, params);
+
+        mChatHead.setOnTouchListener(new View.OnTouchListener() {
+            private WindowManager.LayoutParams paramsF = params;
+            private int initialX;
+            private int initialY;
+            private float initialTouchX;
+            private float initialTouchY;
+
+            private final float SCROLL_THRESHOLD = 10;
+            private boolean isOnClick;
+
+            @Override public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = paramsF.x;
+                        initialY = paramsF.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        isOnClick = true;
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (isOnClick) {
+                            initiatePopupWindow(v);
+                        }
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        paramsF.x = initialX + (int) (event.getRawX() - initialTouchX);
+                        paramsF.y = initialY + (int) (event.getRawY() - initialTouchY);
+                        mWindowManager.updateViewLayout(mChatHead, paramsF);
+
+                        if (isOnClick && (Math.abs(initialTouchX - event.getRawX()) > SCROLL_THRESHOLD || Math.abs(initialTouchY - event.getRawY()) > SCROLL_THRESHOLD)) {
+                            isOnClick = false;
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
+
+    }
+
+
+    private void initiatePopupWindow(View anchor) {
+
+            Display display = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+            ListPopupWindow popup = new ListPopupWindow(this);
+            popup.setAnchorView(anchor);
+            popup.setWidth((int) (display.getWidth()/(1.5)));
+            popup.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new String[] {"A", "B"}));
+            popup.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+                @Override
+                public void onItemClick(AdapterView<?> arg0, View view, int position, long id3) {
+
+                }
+            });
+            popup.show();
     }
 
     private void bypass() {
@@ -169,7 +261,7 @@ public class MockService extends Service {
         mServiceLooper = thread.getLooper();
         mServiceHandler = new ServiceHandler(mServiceLooper);
 
-        mChatHead = new ImageView(this);
+        showChatHead();
 
     }
 
