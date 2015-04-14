@@ -8,6 +8,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.squareup.okhttp.MediaType;
@@ -52,6 +53,8 @@ public class MockService extends Service {
     private boolean mIsBypass;
 
     private String mHost = "http://api.tumblr.com";
+
+    private ImageView mChatHead;
 
 
     // Handler that receives messages from the thread
@@ -165,6 +168,9 @@ public class MockService extends Service {
         // Get the HandlerThread's Looper and use it for our Handler
         mServiceLooper = thread.getLooper();
         mServiceHandler = new ServiceHandler(mServiceLooper);
+
+        mChatHead = new ImageView(this);
+
     }
 
 
